@@ -63,6 +63,12 @@ int main() {
             throw std::runtime_error("expected validation warning for mismatched exit label");
         }
 
+        world.find_room(34021)->exits.front().description = "nuovo titolo destinazione";
+        const std::size_t realigned = nebbie::refresh_inbound_exit_descriptions(world, 34020);
+        if (realigned != 0) {
+            throw std::runtime_error("case-only exit label mismatch should not trigger alignment");
+        }
+
         std::cout << "OK\n";
         return 0;
     } catch (const std::exception& ex) {

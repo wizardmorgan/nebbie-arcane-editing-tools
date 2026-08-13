@@ -122,7 +122,7 @@ void MainWindow::setupUi() {
     room_panel_layout->addWidget(room_scroll, 1);
     auto* room_buttons = new QHBoxLayout;
     auto* room_apply = new QPushButton("Apply changes");
-    auto* room_sync_exits = new QPushButton("Sincronizza uscite in entrata");
+    auto* room_sync_exits = new QPushButton("Allinea uscite in entrata");
     auto* room_goto_exit = new QPushButton("Go to exit target");
     room_buttons->addWidget(room_apply);
     room_buttons->addWidget(room_sync_exits);
@@ -1455,22 +1455,25 @@ void MainWindow::applyRoomChanges() {
     const std::string old_name = room->name;
     nebbie::Room updated = *room;
     room_editor_->saveToRoom(updated);
+    const bool name_changed = old_name != updated.name;
     nebbie::assign_room_fields(*room, updated);
 
-    std::size_t synced = 0;
-    if (old_name != room->name) {
-        synced = nebbie::refresh_inbound_exit_descriptions(world_, vnum);
-        refreshRoomEditorIfInboundExitsChanged(vnum);
+    std::size_t aligned = 0;
+    if (name_changed) {
+        aligned = nebbie::refresh_inbound_exit_descriptions(world_, vnum);
+        if (aligned > 0) {
+            refreshRoomEditorIfInboundExitsChanged(vnum);
+        }
     }
 
     item->setText(QString("#%1 %2").arg(vnum).arg(QString::fromStdString(room->name)));
     markDirty();
-    if (synced > 0) {
-        setStatus(QString("Room %1 updated; %2 inbound exit label(s) synchronized.")
+    if (aligned > 0) {
+        setStatus(QString("Stanza %1 aggiornata: %2 etichetta/e di uscita in entrata allineata/e.")
                       .arg(vnum)
-                      .arg(static_cast<qlonglong>(synced)));
+                      .arg(static_cast<qlonglong>(aligned)));
     } else {
-        setStatus(QString("Room %1 updated in memory.").arg(vnum));
+        setStatus(QString("Stanza %1 aggiornata in memoria.").arg(vnum));
     }
 }
 
@@ -1487,20 +1490,19 @@ void MainWindow::syncInboundExitLabels() {
         return;
     }
 
-    const std::size_t synced = nebbie::refresh_inbound_exit_descriptions(world_, vnum);
-    refreshRoomEditorIfInboundExitsChanged(vnum);
-    markDirty();
-
-    if (synced == 0) {
-        setStatus(QString("Room %1: inbound exit labels already match \"%2\".")
+    const std::size_t aligned = nebbie::refresh_inbound_exit_descriptions(world_, vnum);
+    if (aligned > 0) {
+        refreshRoomEditorIfInboundExitsChanged(vnum);
+        markDirty();
+        setStatus(QString("Stanza %1: %2 etichetta/e di uscita in entrata allineata/e a \"%3\".")
                       .arg(vnum)
+                      .arg(static_cast<qlonglong>(aligned))
                       .arg(QString::fromStdString(room->name)));
         return;
     }
 
-    setStatus(QString("Room %1: synchronized %2 inbound exit label(s) to \"%3\".")
+    setStatus(QString("Stanza %1: le etichette delle uscite in entrata sono già allineate a \"%2\".")
                   .arg(vnum)
-                  .arg(static_cast<qlonglong>(synced))
                   .arg(QString::fromStdString(room->name)));
 }
 

@@ -29,6 +29,34 @@ int parse_int(const std::string& value, const char* field) {
     }
 }
 
+std::string trim_copy(const std::string& value) {
+    std::size_t start = 0;
+    while (start < value.size()
+           && std::isspace(static_cast<unsigned char>(value[start])) != 0) {
+        ++start;
+    }
+    std::size_t end = value.size();
+    while (end > start && std::isspace(static_cast<unsigned char>(value[end - 1])) != 0) {
+        --end;
+    }
+    return value.substr(start, end - start);
+}
+
+bool strings_equal_ci(const std::string& left, const std::string& right) {
+    const std::string a = trim_copy(left);
+    const std::string b = trim_copy(right);
+    if (a.size() != b.size()) {
+        return false;
+    }
+    for (std::size_t i = 0; i < a.size(); ++i) {
+        if (std::tolower(static_cast<unsigned char>(a[i]))
+            != std::tolower(static_cast<unsigned char>(b[i]))) {
+            return false;
+        }
+    }
+    return true;
+}
+
 template <typename Map>
 long max_vnum_in_map(const Map& entities) {
     long max_vnum = 0;
@@ -461,7 +489,7 @@ bool edit_room(World& world, long vnum, const RoomEdit& edit) {
     }
     const std::string old_name = room->name;
     apply_room_edit(*room, edit);
-    if (!edit.name.empty() && old_name != room->name) {
+    if (!edit.name.empty() && !strings_equal_ci(old_name, room->name)) {
         refresh_inbound_exit_descriptions(world, vnum);
     }
     return true;
@@ -592,7 +620,7 @@ std::size_t refresh_inbound_exit_descriptions(World& world, long target_vnum) {
             if (exit.to_room != target_vnum) {
                 continue;
             }
-            if (exit.description == destination->name) {
+            if (strings_equal_ci(exit.description, destination->name)) {
                 continue;
             }
             exit.description = destination->name;

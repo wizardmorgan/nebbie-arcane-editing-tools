@@ -21,10 +21,6 @@ const char* kRoomBits[] = {
     "RESERVED",
 };
 
-const char* kExitBits[] = {
-    "ISDOOR", "CLOSED", "LOCKED", "SECRECT", "NOTBASH", "PICKPROOF", "CLIMB", "MALE", "NOLOOKT",
-};
-
 const char* kExitDirs[] = {
     "north", "east", "south", "west", "up", "down",
 };
@@ -58,7 +54,20 @@ std::vector<MobFlagDef> room_flag_defs() {
 }
 
 std::vector<MobFlagDef> exit_flag_defs() {
-    return make_bit_flags(kExitBits, sizeof(kExitBits) / sizeof(kExitBits[0]));
+    // Names match NebbieArcane exit_bits[] / autoenums.hpp; labels are editor UI only.
+    return {
+        {1L << 0, "ISDOOR", "ISDOOR"},
+        {1L << 1, "CLOSED", "CLOSED"},
+        {1L << 2, "LOCKED", "LOCKED"},
+        {1L << 3, "SECRECT", "SECRECT"},
+        {1L << 4, "NOTBASH", "NOTBASH"},
+        {1L << 5, "PICKPROOF", "PICKPROOF"},
+        {1L << 6, "CLIMB", "CLIMB"},
+        {1L << 7,
+         "EX_MALE: articolo maschile italiano per la keyword (il/la, aperto/aperta)",
+         "MASC"},
+        {1L << 8, "NOLOOKT", "NOLOOKT"},
+    };
 }
 
 std::vector<std::pair<int, std::string>> exit_direction_choices() {
