@@ -9,6 +9,7 @@ class QComboBox;
 class QLineEdit;
 class QListWidget;
 class QSpinBox;
+class QTabWidget;
 class QTextEdit;
 class FlagGroupWidget;
 
@@ -35,7 +36,12 @@ private:
     void updateConditionalFields();
     void refreshExtraDescForm();
     void refreshExitForm();
+    void refreshOverview();
+    void connectOverviewUpdates();
     void setComboIntValue(QComboBox* combo, int value) const;
+
+    bool loading_ = false;
+    QTextEdit* overview_ = nullptr;
 
     QLineEdit* name_ = nullptr;
     QTextEdit* description_ = nullptr;
