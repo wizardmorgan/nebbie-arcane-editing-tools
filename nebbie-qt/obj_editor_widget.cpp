@@ -2,6 +2,9 @@
 
 #include "flag_group_widget.hpp"
 #include "nebbie/obj_catalog.hpp"
+#include "nebbie/system_field_config.hpp"
+
+#include <QMessageBox>
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -347,6 +350,13 @@ void ObjEditorWidget::onAffectSelected() {
 }
 
 void ObjEditorWidget::addAffect() {
+    if (!currentAffectAllowed()) {
+        QMessageBox::warning(this,
+                             "Parametri di sistema",
+                             "Questo affect non e' editabile sugli oggetti con la configurazione "
+                             "di sistema corrente.");
+        return;
+    }
     nebbie::ObjAffect affect;
     affect.location = comboIntValue(affect_location_);
     affect.modifier = affect_modifier_->value();
@@ -376,4 +386,17 @@ void ObjEditorWidget::refreshAffectForm() {
     }
     setComboIntValue(affect_location_, item->data(Qt::UserRole).toInt());
     affect_modifier_->setValue(item->data(Qt::UserRole + 1).toInt());
+}
+
+void ObjEditorWidget::setSystemFieldConfig(const nebbie::SystemFieldConfig* config) {
+    system_field_config_ = config;
+}
+
+bool ObjEditorWidget::currentAffectAllowed() const {
+    if (!system_field_config_) {
+        return true;
+    }
+    return nebbie::object_affect_allowed(*system_field_config_,
+                                         comboIntValue(affect_location_),
+                                         affect_modifier_->value());
 }

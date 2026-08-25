@@ -44,6 +44,8 @@ add_executable(nebbieedit
     mud_color_list_delegate.hpp
     mud_color_dialogs.cpp
     mud_color_dialogs.hpp
+    system_config_dialog.cpp
+    system_config_dialog.hpp
     validation_report_ui.cpp
     validation_report_ui.hpp
     nebbieedit.qrc

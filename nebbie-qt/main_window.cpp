@@ -11,6 +11,7 @@
 #include "obj_editor_widget.hpp"
 #include "room_editor_widget.hpp"
 #include "zone_editor_widget.hpp"
+#include "system_config_dialog.hpp"
 #include "world_data_editor_widget.hpp"
 #include "world_zone_map_widget.hpp"
 #include "zone_map_widget.hpp"
@@ -490,6 +491,11 @@ void MainWindow::setupMenus() {
         "Normalizza description che differiscono dal name di destinazione solo per spazi/newline. "
         "Preserva description vuote, formato [vnum (nome)] e testi di look personalizzati.");
     connect(align_all_exits_action, &QAction::triggered, this, &MainWindow::alignAllInboundExitDescriptions);
+    tools_menu->addSeparator();
+    auto* system_params_action = tools_menu->addAction("Parametri di sistema...");
+    system_params_action->setToolTip(
+        "Configura quali campi (es. resistenza al fuoco) sono editabili su oggetti, mob o PG/toon.");
+    connect(system_params_action, &QAction::triggered, this, &MainWindow::editSystemParameters);
 
     auto* prefs_menu = menuBar()->addMenu("&Preferenze");
     auto* line_limit_action = prefs_menu->addAction("Limite caratteri per riga...");
@@ -647,6 +653,74 @@ void MainWindow::editLineLengthLimit() {
     }
 }
 
+void MainWindow::loadSystemFieldConfig() {
+    if (lib_path_.empty()) {
+        system_field_config_ = nebbie::default_system_field_config();
+    } else {
+        system_field_config_ =
+            nebbie::read_system_field_config(nebbie::default_system_config_path(lib_path_));
+    }
+    applySystemFieldConfigToEditors();
+}
+
+void MainWindow::applySystemFieldConfigToEditors() {
+    mob_editor_->setSystemFieldConfig(&system_field_config_);
+    obj_editor_->setSystemFieldConfig(&system_field_config_);
+}
+
+void MainWindow::editSystemParameters() {
+    if (lib_path_.empty()) {
+        QMessageBox::information(this,
+                                 "Parametri di sistema",
+                                 "Apri prima una libreria per configurare i parametri di sistema.");
+        return;
+    }
+
+    const nebbie::SystemFieldConfig previous = system_field_config_;
+    SystemConfigDialog dialog(this);
+    dialog.setBaselineConfig(previous);
+    dialog.setConfig(system_field_config_);
+    dialog.setWorld(&world_);
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+
+    const nebbie::SystemFieldConfig next = dialog.config();
+    const nebbie::FieldMigrationReport report =
+        nebbie::scan_field_migration(world_, previous, next);
+    if (!report.entries.empty()) {
+        const auto answer = QMessageBox::question(
+            this,
+            "Parametri di sistema",
+            QString("La nuova configurazione impatta %1 voci.\n"
+                    "Rimuovere dal mondo gli affect/flag non piu' consentiti?\n"
+                    "(Puoi annullare e ripristinare .nebbie/system.conf)")
+                .arg(static_cast<int>(report.entries.size())),
+            QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+        if (answer == QMessageBox::Cancel) {
+            return;
+        }
+        if (answer == QMessageBox::Yes) {
+            const int removed_affects =
+                nebbie::strip_disallowed_object_affects(world_, next);
+            const int cleared_flags = nebbie::strip_disallowed_mob_flags(world_, next);
+            markDirty();
+            setStatus(QString("Pulizia migrazione: %1 affect oggetto, %2 flag mob.")
+                          .arg(removed_affects)
+                          .arg(cleared_flags));
+        }
+    }
+
+    system_field_config_ = next;
+    if (!nebbie::write_system_field_config(nebbie::default_system_config_path(lib_path_),
+                                           system_field_config_)) {
+        QMessageBox::warning(this, "Parametri di sistema", "Impossibile salvare .nebbie/system.conf");
+        return;
+    }
+    applySystemFieldConfigToEditors();
+    setStatus("Parametri di sistema salvati in .nebbie/system.conf");
+}
+
 void MainWindow::openLibPath(const QString& path) {
     if (path.isEmpty()) {
         return;
@@ -769,6 +843,7 @@ void MainWindow::loadLib(const std::filesystem::path& path) {
                               .arg(world_.objects.size())
                               .arg(world_.shops.size());
     lib_label_->setText(label);
+    loadSystemFieldConfig();
     last_version_time_ = std::chrono::system_clock::now();
     autosave_timer_->start();
 }

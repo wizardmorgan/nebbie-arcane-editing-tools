@@ -15,6 +15,8 @@ public:
 
     void setValue(long flags);
     long value() const;
+    void setFlagEnabled(long flag_value, bool enabled);
+    void refreshFlagEnabled();
 
 signals:
     void valueChanged();

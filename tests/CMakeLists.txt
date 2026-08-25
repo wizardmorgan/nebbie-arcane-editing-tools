@@ -88,6 +88,10 @@ target_link_libraries(nebbie-zone-partition-tests PRIVATE nebbie-core)
 add_test(NAME zone-partition-fixtures
          COMMAND nebbie-zone-partition-tests ${CMAKE_SOURCE_DIR}/tests/fixtures)
 
+add_executable(nebbie-system-field-config-tests test_system_field_config.cpp)
+target_link_libraries(nebbie-system-field-config-tests PRIVATE nebbie-core)
+add_test(NAME system-field-config-tests COMMAND nebbie-system-field-config-tests)
+
 add_executable(nebbie-nebbietest-mob-tests test_nebbietest_mob.cpp)
 target_link_libraries(nebbie-nebbietest-mob-tests PRIVATE nebbie-core)
 

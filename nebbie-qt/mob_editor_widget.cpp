@@ -2,6 +2,7 @@
 
 #include "flag_group_widget.hpp"
 #include "nebbie/mob_catalog.hpp"
+#include "nebbie/system_field_config.hpp"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -340,6 +341,7 @@ void MobEditorWidget::loadFromMobile(const nebbie::Mobile& mob) {
     }
 
     updateTypeDependentFields();
+    applySystemFieldRules();
 }
 
 void MobEditorWidget::saveToMobile(nebbie::Mobile& mob) const {
@@ -392,6 +394,37 @@ void MobEditorWidget::saveToMobile(nebbie::Mobile& mob) const {
         const std::string value = line.trimmed().toStdString();
         if (!value.empty()) {
             mob.extra_sound_strings.push_back(value);
+        }
+    }
+}
+
+void MobEditorWidget::setSystemFieldConfig(const nebbie::SystemFieldConfig* config) {
+    system_field_config_ = config;
+    applySystemFieldRules();
+}
+
+void MobEditorWidget::applySystemFieldRules() {
+    immune_flags_->refreshFlagEnabled();
+    meta_immune_flags_->refreshFlagEnabled();
+    susceptible_flags_->refreshFlagEnabled();
+    if (!system_field_config_) {
+        return;
+    }
+    for (const auto& def : system_field_config_->definitions) {
+        FlagGroupWidget* group = nullptr;
+        switch (def.kind) {
+        case nebbie::SystemFieldKind::Resistance:
+            group = immune_flags_;
+            break;
+        case nebbie::SystemFieldKind::Susceptibility:
+            group = susceptible_flags_;
+            break;
+        case nebbie::SystemFieldKind::Immunity:
+            group = meta_immune_flags_;
+            break;
+        }
+        if (group != nullptr) {
+            group->setFlagEnabled(def.mob_flag_bit, nebbie::mob_field_allowed(*system_field_config_, def));
         }
     }
 }

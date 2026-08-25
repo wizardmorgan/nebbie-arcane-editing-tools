@@ -1,6 +1,7 @@
 #pragma once
 
 #include "nebbie/types.hpp"
+#include "nebbie/system_field_config.hpp"
 
 #include <QWidget>
 
@@ -19,9 +20,13 @@ public:
 
     void loadFromMobile(const nebbie::Mobile& mob);
     void saveToMobile(nebbie::Mobile& mob) const;
+    void setSystemFieldConfig(const nebbie::SystemFieldConfig* config);
 
 private:
     void updateTypeDependentFields();
+    void applySystemFieldRules();
+
+    const nebbie::SystemFieldConfig* system_field_config_ = nullptr;
 
     QLineEdit* name_ = nullptr;
     QTextEdit* short_descr_ = nullptr;

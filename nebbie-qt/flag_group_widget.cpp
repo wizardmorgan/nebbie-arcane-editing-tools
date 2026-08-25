@@ -39,3 +39,21 @@ long FlagGroupWidget::value() const {
     }
     return nebbie::flags_value_from_selection(defs_, selected);
 }
+
+void FlagGroupWidget::setFlagEnabled(const long flag_value, const bool enabled) {
+    for (std::size_t i = 0; i < defs_.size() && i < boxes_.size(); ++i) {
+        if (defs_[i].value == flag_value) {
+            boxes_[i]->setEnabled(enabled);
+            if (!enabled) {
+                boxes_[i]->setChecked(false);
+            }
+            return;
+        }
+    }
+}
+
+void FlagGroupWidget::refreshFlagEnabled() {
+    for (auto* box : boxes_) {
+        box->setEnabled(true);
+    }
+}

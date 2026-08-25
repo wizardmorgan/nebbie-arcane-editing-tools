@@ -1,6 +1,7 @@
 #pragma once
 
 #include "nebbie/types.hpp"
+#include "nebbie/system_field_config.hpp"
 
 #include <QWidget>
 
@@ -20,6 +21,7 @@ public:
 
     void loadFromObject(const nebbie::GameObject& obj);
     void saveToObject(nebbie::GameObject& obj) const;
+    void setSystemFieldConfig(const nebbie::SystemFieldConfig* config);
 
 private slots:
     void onExtraDescSelected();
@@ -33,6 +35,9 @@ private:
     void refreshExtraDescForm();
     void refreshAffectForm();
     void setComboIntValue(QComboBox* combo, int value) const;
+    bool currentAffectAllowed() const;
+
+    const nebbie::SystemFieldConfig* system_field_config_ = nullptr;
 
     QLineEdit* name_ = nullptr;
     QTextEdit* short_descr_ = nullptr;

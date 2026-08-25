@@ -7,6 +7,7 @@
 #include "nebbie/lib_context.hpp"
 #include "nebbie/session.hpp"
 #include "nebbie/validate.hpp"
+#include "nebbie/system_field_config.hpp"
 #include "nebbie/world.hpp"
 #include "nebbie/world_index.hpp"
 #include "nebbie/zone_partition.hpp"
@@ -90,6 +91,7 @@ private slots:
     void exportZonePacks();
     void reserveVnums();
     void editLineLengthLimit();
+    void editSystemParameters();
     void toggleExtendedColorView(bool enabled);
     void showColorLegend();
     void insertColorCode();
@@ -113,6 +115,8 @@ private:
     void refreshZoneMap();
     void refreshWorldZoneMap();
     void updateMapStats();
+    void applySystemFieldConfigToEditors();
+    void loadSystemFieldConfig();
     void openZoneRoomMap(int zone_num);
     void exportMapPng(ZoneMapWidget* view, const QString& suggested_name);
     void exportMapPng(WorldZoneMapWidget* view, const QString& suggested_name);
@@ -148,6 +152,7 @@ private:
     bool dirty_ = false;
     std::set<long> dirty_room_vnums_;
     nebbie::qt::AppConfig app_config_;
+    nebbie::SystemFieldConfig system_field_config_;
     std::optional<nebbie::WorldIndex> world_index_;
     QNetworkAccessManager* network_ = nullptr;
     nebbie::qt::ReleaseUpdateChecker* update_checker_ = nullptr;
