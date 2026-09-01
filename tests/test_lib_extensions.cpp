@@ -3,6 +3,7 @@
 #include "nebbie/constants.hpp"
 
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <stdexcept>
 
@@ -60,6 +61,57 @@ int main(int argc, char** argv) {
         if (!std::filesystem::exists(out / "castelli.zon")
             || !std::filesystem::exists(out / "castelli.wld")) {
             throw std::runtime_error("save_lib did not preserve castelli.* filenames");
+        }
+
+        const auto blank_shop_dir = std::filesystem::temp_directory_path() / "nebbie-lib-blank-shop-test";
+        std::filesystem::remove_all(blank_shop_dir);
+        std::filesystem::create_directories(blank_shop_dir);
+        copy_fixture_file(fixtures / nebbie::ZONE_FILE, blank_shop_dir, "castelli.zon");
+        copy_fixture_file(fixtures / nebbie::WORLD_FILE, blank_shop_dir, "castelli.wld");
+        copy_fixture_file(fixtures / nebbie::MOB_FILE, blank_shop_dir, "castelli.mob");
+        copy_fixture_file(fixtures / nebbie::OBJ_FILE, blank_shop_dir, "castelli.obj");
+        {
+            std::ofstream blank_shop(blank_shop_dir / nebbie::SHOP_FILE);
+            blank_shop << "   \n\n";
+        }
+
+        nebbie::World blank_shop_world;
+        nebbie::LibContext blank_shop_context;
+        nebbie::load_lib(blank_shop_world, blank_shop_dir, blank_shop_context);
+        if (blank_shop_context.has_shp) {
+            throw std::runtime_error("blank myst.shp should be ignored");
+        }
+        if (!blank_shop_world.shops.empty()) {
+            throw std::runtime_error("blank myst.shp should not load shops");
+        }
+        if (blank_shop_world.zones.empty() || blank_shop_world.rooms.empty()) {
+            throw std::runtime_error("expected core library data despite blank myst.shp");
+        }
+
+        const auto broken_shop_dir = std::filesystem::temp_directory_path() / "nebbie-lib-broken-shop-test";
+        std::filesystem::remove_all(broken_shop_dir);
+        std::filesystem::create_directories(broken_shop_dir);
+        copy_fixture_file(fixtures / nebbie::ZONE_FILE, broken_shop_dir, "castelli.zon");
+        copy_fixture_file(fixtures / nebbie::WORLD_FILE, broken_shop_dir, "castelli.wld");
+        copy_fixture_file(fixtures / nebbie::MOB_FILE, broken_shop_dir, "castelli.mob");
+        copy_fixture_file(fixtures / nebbie::OBJ_FILE, broken_shop_dir, "castelli.obj");
+        {
+            std::ofstream truncated_shop(broken_shop_dir / nebbie::SHOP_FILE);
+            truncated_shop << "#1~\n";
+        }
+
+        nebbie::World broken_shop_world;
+        nebbie::LibContext broken_shop_context;
+        nebbie::load_lib(broken_shop_world, broken_shop_dir, broken_shop_context);
+        if (broken_shop_context.has_shp) {
+            throw std::runtime_error("truncated myst.shp should not be marked loaded");
+        }
+        if (!broken_shop_context.load_warnings.empty()) {
+            if (broken_shop_context.load_warnings.front().find("myst.shp") == std::string::npos) {
+                throw std::runtime_error("expected myst.shp warning for truncated shop file");
+            }
+        } else {
+            throw std::runtime_error("expected warning for truncated myst.shp");
         }
 
         std::cout << "OK\n";
