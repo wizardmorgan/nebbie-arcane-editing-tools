@@ -6,8 +6,10 @@
 #include "nebbie/fread.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <cstdio>
 #include <filesystem>
+#include <fstream>
 #include <functional>
 #include <map>
 #include <vector>
@@ -145,29 +147,60 @@ void track_object_sources(LibContext& context,
     assign_long_sources(context.object_sources, path, vnums);
 }
 
+bool file_has_non_whitespace_content(const std::filesystem::path& path) {
+    std::ifstream input(path, std::ios::binary);
+    if (!input) {
+        return false;
+    }
+
+    char byte = '\0';
+    while (input.get(byte)) {
+        if (!std::isspace(static_cast<unsigned char>(byte))) {
+            return true;
+        }
+    }
+    return false;
+}
+
 template <typename Loader>
 void load_discovered_files(World& world,
                            LibContext& context,
                            const std::vector<std::filesystem::path>& paths,
                            bool& has_flag,
                            std::filesystem::path& primary_path,
-                           Loader loader) {
+                           Loader loader,
+                           bool optional = false) {
     if (paths.empty()) {
         return;
     }
 
-    has_flag = true;
+    bool loaded_any = false;
     primary_path = paths.front().filename();
     for (std::size_t i = 0; i < paths.size(); ++i) {
         std::error_code size_ec;
         if (std::filesystem::file_size(paths[i], size_ec) == 0) {
             continue;
         }
-        try {
-            loader(paths[i], i == 0);
-        } catch (const std::exception& ex) {
-            throw std::runtime_error(std::string(ex.what()) + " in " + paths[i].filename().string());
+        if (!file_has_non_whitespace_content(paths[i])) {
+            continue;
         }
+        try {
+            loader(paths[i], !loaded_any);
+            loaded_any = true;
+        } catch (const std::exception& ex) {
+            const std::string message =
+                std::string(ex.what()) + " in " + paths[i].filename().string();
+            if (optional) {
+                context.load_warnings.push_back(message);
+                break;
+            }
+            throw std::runtime_error(message);
+        }
+    }
+
+    has_flag = loaded_any;
+    if (!loaded_any) {
+        primary_path.clear();
     }
 }
 
@@ -415,7 +448,8 @@ void load_lib(World& world,
             if (context.shp_path.empty()) {
                 context.shp_path = path.filename();
             }
-        });
+        },
+        true);
 
     load_discovered_files(
         world,
@@ -428,7 +462,8 @@ void load_lib(World& world,
             if (context.spe_path.empty()) {
                 context.spe_path = path.filename();
             }
-        });
+        },
+        true);
 
     load_discovered_files(
         world,
@@ -441,7 +476,8 @@ void load_lib(World& world,
             if (context.dam_path.empty()) {
                 context.dam_path = path.filename();
             }
-        });
+        },
+        true);
 
     load_discovered_files(
         world,
@@ -454,7 +490,8 @@ void load_lib(World& world,
             if (context.act_path.empty()) {
                 context.act_path = path.filename();
             }
-        });
+        },
+        true);
 
     load_discovered_files(
         world,
@@ -467,7 +504,8 @@ void load_lib(World& world,
             if (context.pos_path.empty()) {
                 context.pos_path = path.filename();
             }
-        });
+        },
+        true);
 
     load_discovered_files(
         world,
@@ -480,7 +518,8 @@ void load_lib(World& world,
             if (context.gui_path.empty()) {
                 context.gui_path = path.filename();
             }
-        });
+        },
+        true);
 
     const OverlayImportReport overlay_report = apply_overlays(world, resolved, progress);
     if (progress && (overlay_report.rooms > 0 || overlay_report.objects > 0 || overlay_report.mobiles > 0

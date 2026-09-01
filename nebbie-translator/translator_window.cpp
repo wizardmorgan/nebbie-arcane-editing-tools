@@ -248,6 +248,16 @@ void TranslatorWindow::changeEvent(QEvent* event) {
 }
 
 void TranslatorWindow::openLibPath(const QString& path) {
+    if (path.isEmpty()) {
+        return;
+    }
+    if (!lib_path_.empty()) {
+        const std::filesystem::path requested = nebbie::qt::path_from_qstring(path);
+        const std::filesystem::path resolved = nebbie::resolve_lib_directory(requested);
+        if (resolved != lib_path_ && !confirmSaveIfDirty()) {
+            return;
+        }
+    }
     try {
         const std::filesystem::path requested = nebbie::qt::path_from_qstring(path);
         const std::filesystem::path resolved = nebbie::resolve_lib_directory(requested);
@@ -256,22 +266,45 @@ void TranslatorWindow::openLibPath(const QString& path) {
                                  QString("Percorso non valido:\n%1").arg(path));
             return;
         }
+        if (!nebbie::directory_has_lib_files(resolved)) {
+            QMessageBox::warning(
+                this,
+                "Apri libreria",
+                QString("La cartella selezionata non contiene file libreria Nebbie "
+                        "(.zon, .wld, .mob, .obj, ...).\n\n"
+                        "Percorso richiesto: %1\n"
+                        "Percorso risolto: %2")
+                    .arg(path)
+                    .arg(nebbie::qt::qstring_from_path(resolved)));
+            return;
+        }
         if (requested != resolved) {
             setStatus(QString("Libreria risolta in: %1")
                           .arg(nebbie::qt::qstring_from_path(resolved)));
         }
         loadLib(resolved);
         rememberLibPath(resolved);
+        if (!context_.load_warnings.empty()) {
+            QString warning_text;
+            for (const std::string& warning : context_.load_warnings) {
+                if (!warning_text.isEmpty()) {
+                    warning_text += "\n\n";
+                }
+                warning_text += QString::fromUtf8(warning.c_str());
+            }
+            QMessageBox::warning(
+                this,
+                "Avvisi caricamento libreria",
+                QString("La libreria e' stata aperta, ma alcuni file monolitici opzionali "
+                        "non sono stati caricati:\n\n%1")
+                    .arg(warning_text));
+        }
     } catch (const std::exception& ex) {
         QMessageBox::critical(this, "Apri libreria", QString::fromUtf8(ex.what()));
     }
 }
 
 void TranslatorWindow::openLib() {
-    if (!confirmSaveIfDirty()) {
-        return;
-    }
-
     const QString dir = QFileDialog::getExistingDirectory(
         this, "Apri libreria Nebbie (mudroot o mudroot/lib)", nebbie::translate::read_lib_path(),
         QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
@@ -339,9 +372,12 @@ bool TranslatorWindow::promptForLibPath(const QString& reason) {
 }
 
 void TranslatorWindow::loadLib(const std::filesystem::path& path) {
-    world_.clear();
-    context_ = {};
-    nebbie::load_lib(world_, path, context_);
+    nebbie::World loaded_world;
+    nebbie::LibContext loaded_context;
+    nebbie::load_lib(loaded_world, path, loaded_context);
+
+    world_ = std::move(loaded_world);
+    context_ = std::move(loaded_context);
     lib_path_ = path;
     room_filter_.clear();
     room_search_->clear();

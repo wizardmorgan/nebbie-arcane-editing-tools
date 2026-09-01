@@ -1,7 +1,9 @@
 #pragma once
 
 #include <filesystem>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace nebbie {
 
@@ -33,6 +35,8 @@ struct LibContext {
     std::unordered_map<long, std::filesystem::path> room_sources;
     std::unordered_map<long, std::filesystem::path> mobile_sources;
     std::unordered_map<long, std::filesystem::path> object_sources;
+
+    std::vector<std::string> load_warnings;
 
     bool has_any() const;
 };
